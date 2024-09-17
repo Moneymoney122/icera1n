@@ -11,6 +11,42 @@ case "${unameOut}" in
 esac
 
  }
+ function restoreiosnormal {
+ 	clear
+ 	echo Either paste the path to the shsh-blob or drag and drop it: 
+ 	read pathsh22
+ 	echo Either paste the path to the ipsw or drag and drop it:
+ 	read ipswpath
+ 	echo Does your device have a baseband? 
+ 	case `select_opt "Yes" "No"` in
+ 	 			0) echo Running futurerestore -t $pathsh22 --latest-sep --latest-baseband $ipswpath && ./"$unameOut"/futurerestore -t $pathsh22 --latest-sep --latest-baseband $ipswpath && echo Done! Press enter to continue && read && mainmenu ;;
+ 	 		    1) echo Running futurerestore -t $pathsh22 --latest-sep --no-baseband $ipswpath && ./"$unameOut"/futurerestore -t $pathsh22 --latest-sep --no-baseband $ipswpath && echo Done! Press enter to continue && read && mainmenu ;;
+ 	esac
+ }
+ function restoreiosgaster {
+ 	clear
+ 	echo Either paste the path to the shsh-blob or drag and drop it: 
+ 	read pathsh22
+ 	echo Either paste the path to the ipsw or drag and drop it:
+ 	read ipswpath
+ 	echo Does your device have a baseband? 
+ 	case `select_opt "Yes" "No"` in
+ 	 			0) echo Running futurerestore --use-pwndfu --set-nonce -t $pathsh22 --latest-sep --latest-baseband $ipswpath && ./"$unameOut"/futurerestore -t $pathsh22 --latest-sep --latest-baseband $ipswpath && echo Done! Press enter to continue && read && mainmenu;;
+ 	 		    1) echo Running futurerestore --use-pwndfu --set-nonce -t $pathsh22 --latest-sep --no-baseband $ipswpath && ./"$unameOut"/futurerestore -t $pathsh22 --latest-sep --no-baseband $ipswpath && echo Done! Press enter to continue && read && mainmenu;;
+ 	esac
+ } 
+ function restoreios {
+ 	clear
+ 	echo If you are restoring normally or with CheckM8 noncesetter choose normal restore.
+ 	echo If you are using gaster choose gaster.
+ 	case `select_opt "Normal Restore" "Gaster Restore" "Back" "Help" "Exit Recovery"` in
+ 			0) restoreiosnormal;;
+ 		    1) restoreiosgaster;;
+ 		    2) mainmenu;;
+ 		    3) echo Restores on iOS 16 Supported devices are not possible as they have incompatible SEP && read && restoreios;;
+ 		    4) ./"$unameOut"/futurerestore --exit-recovery && restoreios;;
+ 	esac
+ }
 function select_option {
 
     # little helpers for terminal print control and key input
@@ -68,6 +104,41 @@ function select_option {
 
     return $selected
 }
+function dfugaster {
+	clear
+	echo Connect your device in DFU mode and hit Enter
+	case `select_opt "Continue" "Back"` in
+			  	    0) ./"$unameOut"/gaster pwn && ./"$unameOut"/gaster reset && init_restore;;
+			  	    1) dfupwn;;
+	esac
+}
+function m8nonce {
+	clear
+	echo Connect your device in normal mode. Once the nonce setter gets stuck,
+	echo Put it in DFU mode.
+	case `select_opt "Continue" "Back"` in
+		  	    0) cd ./"$unameOut"/noncesetter/ && ./main.sh && cd ../../ && init_restore;;
+		  	    1) dfupwn;;
+	esac
+}
+function dfupwn {
+		clear
+		case `select_opt "Method 1: CheckM8 Nonce Setter (Reccomended)" "Method 2: Gaster" "Back" "Help"` in
+	  	    0) m8nonce;;
+	  	    1) dfugaster;;
+	  	    2) init_restore;;
+	  	    3) echo CheckM8 Nonce Setter is better than Gaster as it works better with futurerestore. && echo Even if a guide you are following says to use gaster you can use CheckM8 instead && echo as they serve the same purpose. && read && dfupwn;;
+	  	esac	
+}
+function init_restore {
+		clear
+		case `select_opt "Run Futurerestore" "PwnDFU" "Back"` in
+	  	    0) restoreios;;
+	  	    1) dfupwn;;
+	  	    2) mainmenu;;
+	  	esac
+}
+
 function select_opt {
     select_option "$@" 1>&2
     local result=$?
@@ -81,17 +152,26 @@ function ra1n_control {
 }
 function init_ra1n {
 		clear
-		case `select_opt "Rootless" "Rootful (Re Jailbreak)" "Rootful First-time setup" "Rootful First-time setup (16GB devices)" "Remove Jailbreak (Rootful)" "Remove Jailbreak (Rootless)" "Back"` in
-	  	    0) clear && echo "Running palera1n rootless" && palera1n & ra1n_control;;
+		case `select_opt "Rootless" "Rootful (Re Jailbreak)" "Rootful First-time setup" "Rootful First-time setup (16GB devices)" "Remove Jailbreak (Rootful)" "Remove Jailbreak (Rootless)" "Back" "Help"` in
+	  	    0) clear && echo "Running palera1n -l rootless" && palera1n -l & ra1n_control;;
 	  	    1) clear && echo "Running palera1n -f rootful" && palera1n -f & ra1n_control;;
 	  	    2) clear && echo "Running palera1n -fc rootful fakefs creation" && palera1n -fc & ra1n_control;;
 	  	    3) clear && echo "Running palera1n -Bf rootful fakefs bind mount creation" && palera1n -Bf & ra1n_control;;
 	  	    4) clear && echo "Running palera1n --force-revert -f Remove rootful" && palera1n --force-revert -f & ra1n_control;;
-	  	    5) clear && echo "Running palera1n --force-revert Remove rootless" && palera1n --force-revert & ra1n_control;;
+	  	    5) clear && echo "Running palera1n --force-revert -l Remove rootless" && palera1n --force-revert -l & ra1n_control;;
 	  	    6) mainmenu ;;
+	  	    7) echo Only use palera1n if your device is not supported by Dopamine jailbreak && read && init_ra1n;;
 	  	esac
 	  	
 }
+
+function idr {
+	echo "Drag 'n drop the ipsw: " 
+	read ipswpath
+	./"$unameOut"/idevicerestore -e $ipswpath
+	
+}	  	
+
 function mainmenu {
 		clear
 cat << "EOF"
@@ -105,13 +185,12 @@ _________ _______  _______  _______  _______  __    _
 ___) (___| (____/\| (____/\| ) \ \__| )   ( |__) (_| )  \  |
 \_______/(_______/(_______/|/   \__/|/     \|\____/|/    )_)
 ============================================================
-icera1n v1.0: dash carbon
-============================================================
-
+icera1n v2.0: KFD Chicken
 EOF
-		case `select_opt "Palera1n" "Exit"` in
+		case `select_opt "Palera1n" "Futurerestore"  "Exit"` in
 	  	    0) init_ra1n;;
-	  	    1) killall usbmuxd palera1n && clear && echo;;
+	  	    1) init_restore;;
+	  	    2) killall usbmuxd palera1n && clear && echo;;
 	  	esac
 	  	
 }
